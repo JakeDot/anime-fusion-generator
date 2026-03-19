@@ -1,0 +1,12 @@
+[
+  { "id": "aot", "name": "Attack on Titan", "desc": "gritty realism, scale" },
+  { "id": "hp", "name": "Harry Potter", "desc": "magical atmosphere, gothic" },
+  { "id": "ds", "name": "Demon Slayer", "desc": "vibrant effects" },
+  { "id": "bb", "name": "Black Butler", "desc": "Victorian elegance" },
+  { "id": "sxf", "name": "Spy x Family", "desc": "mid-century clean" },
+  { "id": "jjk", "name": "Jujutsu Kaisen", "desc": "dynamic energy" },
+  { "id": "fma", "name": "Fullmetal Alchemist", "desc": "steampunk alchemy" },
+  { "id": "csm", "name": "Chainsaw Man", "desc": "raw cinematic" },
+  { "id": "cb", "name": "Cowboy Bebop", "desc": "jazz-noir retro" },
+  { "id": "monster", "name": "Monster", "desc": "psychological thriller" }
+]
