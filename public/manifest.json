@@ -2,19 +2,19 @@
   "name": "Anime Fusion Generator",
   "short_name": "AnimeFusion",
   "description": "Generate unique anime fusions from your favorite series.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "/anime-fusion.png",
+      "src": "anime-fusion.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/anime-fusion.png",
+      "src": "anime-fusion.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
