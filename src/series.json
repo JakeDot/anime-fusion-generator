@@ -1,12 +1,12 @@
 [
-  { "id": "aot", "name": "Attack on Titan", "desc": "gritty realism, scale" },
-  { "id": "hp", "name": "Harry Potter", "desc": "magical atmosphere, gothic" },
-  { "id": "ds", "name": "Demon Slayer", "desc": "vibrant effects" },
-  { "id": "bb", "name": "Black Butler", "desc": "Victorian elegance" },
-  { "id": "sxf", "name": "Spy x Family", "desc": "mid-century clean" },
-  { "id": "jjk", "name": "Jujutsu Kaisen", "desc": "dynamic energy" },
-  { "id": "fma", "name": "Fullmetal Alchemist", "desc": "steampunk alchemy" },
-  { "id": "csm", "name": "Chainsaw Man", "desc": "raw cinematic" },
-  { "id": "cb", "name": "Cowboy Bebop", "desc": "jazz-noir retro" },
-  { "id": "monster", "name": "Monster", "desc": "psychological thriller" }
+  { "id": "aot", "name": "Attack on Titan", "desc": "Gritty realism, massive scale", "icon": "⚔️" },
+  { "id": "hp", "name": "Harry Potter", "desc": "Magical atmosphere, gothic", "icon": "🪄" },
+  { "id": "ds", "name": "Demon Slayer", "desc": "Vibrant effects, breathing styles", "icon": "🌊" },
+  { "id": "bb", "name": "Black Butler", "desc": "Victorian elegance, dark mystery", "icon": "🤵" },
+  { "id": "sxf", "name": "Spy x Family", "desc": "Mid-century clean, family dynamic", "icon": "🥜" },
+  { "id": "jjk", "name": "Jujutsu Kaisen", "desc": "Dynamic energy, cursed techniques", "icon": "🧿" },
+  { "id": "fma", "name": "Fullmetal Alchemist", "desc": "Steampunk alchemy, equivalent exchange", "icon": "🦾" },
+  { "id": "csm", "name": "Chainsaw Man", "desc": "Raw cinematic, devil hunting", "icon": "🪚" },
+  { "id": "cb", "name": "Cowboy Bebop", "desc": "Jazz-noir retro, space bounty", "icon": "🚀" },
+  { "id": "monster", "name": "Monster", "desc": "Psychological thriller, suspense", "icon": "🧠" }
 ]

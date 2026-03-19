@@ -59,6 +59,9 @@ export const SeriesGrid: React.FC<SeriesGridProps> = ({
                 <h3 className={`font-bold text-sm leading-tight ${isSelected ? 'text-white' : 'text-neutral-400'}`}>
                   {series.name}
                 </h3>
+                <p className={`text-[10px] mt-1 leading-tight ${isSelected ? 'text-indigo-200/70' : 'text-neutral-600'}`}>
+                  {series.desc}
+                </p>
               </div>
               {isSelected && (
                 <motion.div 

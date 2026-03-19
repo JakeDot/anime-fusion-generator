@@ -62,7 +62,7 @@ export const Footer: React.FC = () => {
         <a href="#" className="hover:text-indigo-400 transition-colors">API Status</a>
       </div>
       <p className="text-[10px] font-mono uppercase tracking-widest">
-        &copy; 2026 JAKEDOT.AI
+        &copy; 2026 JAKEDOT.NET
       </p>
     </footer>
   );
