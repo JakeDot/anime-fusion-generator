@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, X, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, X, Check, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface SeriesGridProps {
@@ -23,6 +23,12 @@ export const SeriesGrid: React.FC<SeriesGridProps> = ({
   addCustomSeries,
   removeCustomSeries
 }) => {
+  const [showAllSeries, setShowAllSeries] = useState(false);
+  
+  const displayLimit = 10;
+  const displayedSeries = showAllSeries ? predefinedSeries : predefinedSeries.slice(0, displayLimit);
+  const hasMore = predefinedSeries.length > displayLimit;
+
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
@@ -36,12 +42,12 @@ export const SeriesGrid: React.FC<SeriesGridProps> = ({
       </div>
       
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {predefinedSeries.map((series) => {
+        {displayedSeries.map((series) => {
           const isSelected = selectedSeries.includes(series.id);
           return (
             <motion.button
               key={series.id}
-              whileHover={{ y: -4 }}
+              whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)" }}
               whileTap={{ scale: 0.95 }}
               onClick={() => toggleSeries(series.id)}
               className={`relative group p-4 rounded-2xl border transition-all duration-300 text-left overflow-hidden ${
@@ -79,13 +85,32 @@ export const SeriesGrid: React.FC<SeriesGridProps> = ({
           );
         })}
 
+        {hasMore && !showAllSeries && (
+          <motion.button
+            whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)" }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowAllSeries(true)}
+            className="relative group p-4 rounded-2xl border transition-all duration-300 text-left overflow-hidden bg-neutral-900/50 border-white/5 hover:border-white/20 flex flex-col items-center justify-center"
+          >
+            <div className="w-10 h-10 rounded-xl mb-3 flex items-center justify-center text-xl bg-neutral-800 text-neutral-400 transition-transform duration-500 group-hover:scale-110">
+              <ChevronDown className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-sm leading-tight text-neutral-400">
+              More Series...
+            </h3>
+            <p className="text-[10px] mt-1 leading-tight text-neutral-600 text-center">
+              +{predefinedSeries.length - displayLimit} more options
+            </p>
+          </motion.button>
+        )}
+
         {customSeries.map((name) => {
           const id = `custom-${name}`;
           const isSelected = selectedSeries.includes(id);
           return (
             <motion.div
               key={id}
-              whileHover={{ y: -4 }}
+              whileHover={{ scale: 1.03, y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)" }}
               className={`relative group p-4 rounded-2xl border transition-all duration-300 text-left overflow-hidden ${
                 isSelected 
                   ? 'bg-emerald-600/10 border-emerald-500/50' 

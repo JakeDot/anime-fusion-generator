@@ -2,7 +2,7 @@ import React from 'react';
 import { Scissors, X, Sliders, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Cropper from 'react-easy-crop';
-import { GeneratedImage } from '../types';
+import { GeneratedImage } from '../../types';
 
 interface EditModalProps {
   isEditing: boolean;

@@ -17,11 +17,13 @@
     "crc-32": "^1.2.2",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "firebase": "^12.11.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-easy-crop": "^5.5.6",
+    "react-router-dom": "^7.13.1",
     "vite": "^6.2.0"
   },
   "devDependencies": {

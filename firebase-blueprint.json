@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "Fusion": {
+      "title": "Fusion",
+      "description": "A generated anime fusion image with metadata.",
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The prompt used to generate the image."
+        },
+        "series": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The series combined in this fusion."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "The base64 data URI of the generated image."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the fusion was generated."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "The user ID of the creator, if authenticated."
+        },
+        "isAutoDream": {
+          "type": "boolean",
+          "description": "Whether this fusion was generated automatically by the Auto Dream service."
+        }
+      },
+      "required": ["prompt", "series", "imageUrl", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/fusions/{fusionId}": {
+      "schema": { "$ref": "#/entities/Fusion" },
+      "description": "Stores generated fusions for sharing."
+    }
+  }
+}

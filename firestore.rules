@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: fusions
+    // Document ID: auto-generated
+    // Fields:
+    //   - prompt: string (required, max 1000 chars) - The prompt used
+    //   - series: list of strings (required, max 20 items, max 100 chars each) - The series combined
+    //   - imageUrl: string (required, max 1048576 chars) - Base64 image data
+    //   - createdAt: timestamp (required) - Creation time
+    //   - authorId: string (required) - The UID of the creator
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidList(listField, maxSize, maxItemSize) {
+      return request.resource.data[listField] is list &&
+             request.resource.data[listField].size() <= maxSize;
+      // Note: We can't easily iterate to check item sizes in rules, but we check list size.
+    }
+
+    function isValidFusion() {
+      return hasRequiredFields(['prompt', 'series', 'imageUrl', 'createdAt', 'authorId']) &&
+             request.resource.data.keys().hasOnly(['prompt', 'series', 'imageUrl', 'createdAt', 'authorId', 'isAutoDream']) &&
+             validStringLength('prompt', 1, 2000) &&
+             validStringLength('imageUrl', 1, 1048576) && // 1MB limit for base64
+             isValidList('series', 20, 100) &&
+             request.resource.data.createdAt is timestamp &&
+             request.resource.data.authorId == request.auth.uid &&
+             (!('isAutoDream' in request.resource.data) || request.resource.data.isAutoDream is bool);
+    }
+
+    match /fusions/{fusionId} {
+      // Allow public read so shared links work
+      allow read: if true;
+      
+      // Allow authenticated users (including anonymous) to create fusions
+      allow create: if isAuthenticated() && isValidFusion();
+      
+      // Fusions are immutable once created
+      allow update, delete: if false;
+    }
+  }
+}

@@ -8,5 +8,17 @@
   { "id": "fma", "name": "Fullmetal Alchemist", "desc": "Steampunk alchemy, equivalent exchange", "icon": "🦾" },
   { "id": "csm", "name": "Chainsaw Man", "desc": "Raw cinematic, devil hunting", "icon": "🪚" },
   { "id": "cb", "name": "Cowboy Bebop", "desc": "Jazz-noir retro, space bounty", "icon": "🚀" },
-  { "id": "monster", "name": "Monster", "desc": "Psychological thriller, suspense", "icon": "🧠" }
+  { "id": "monster", "name": "Monster", "desc": "Psychological thriller, suspense", "icon": "🧠" },
+  { "id": "pokemon", "name": "Pokémon", "desc": "Creature collecting, adventure", "icon": "⚡" },
+  { "id": "digimon", "name": "Digimon", "desc": "Digital monsters, adventure", "icon": "🦖" },
+  { "id": "op", "name": "One Piece", "desc": "Pirate adventure, cartoonish elasticity", "icon": "🏴‍☠️" },
+  { "id": "naruto", "name": "Naruto", "desc": "Ninja action, dynamic jutsu", "icon": "🍥" },
+  { "id": "dbz", "name": "Dragon Ball Z", "desc": "High energy, glowing auras", "icon": "🐉" },
+  { "id": "hxh", "name": "Hunter x Hunter", "desc": "Strategic battles, nen abilities", "icon": "🎣" },
+  { "id": "mha", "name": "My Hero Academia", "desc": "Superhero comic style, quirks", "icon": "🦸" },
+  { "id": "jojo", "name": "JoJo's Bizarre Adventure", "desc": "Fabulous poses, vibrant colors", "icon": "🌟" },
+  { "id": "eva", "name": "Neon Genesis Evangelion", "desc": "Mecha, psychological, surreal", "icon": "🤖" },
+  { "id": "berserk", "name": "Berserk", "desc": "Dark fantasy, detailed crosshatching", "icon": "🗡️" },
+  { "id": "opm", "name": "One Punch Man", "desc": "Over-the-top action, detailed art", "icon": "👊" },
+  { "id": "bf", "name": "Banana Fish", "desc": "Crime thriller, gritty, emotional", "icon": "🍌" }
 ]

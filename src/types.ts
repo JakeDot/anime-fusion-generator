@@ -4,6 +4,7 @@ export interface GeneratedImage {
   prompt: string;
   series: string[];
   timestamp: number;
+  metadata?: string;
 }
 
 export interface ReferenceImage {
