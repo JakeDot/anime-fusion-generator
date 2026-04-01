@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import PREDEFINED_SERIES from '../series.json';
+import PREDEFINED_SERIES from '../series/series.json';
 
 const PROMPT_TEMPLATES = [
   "Epic battle scene with dynamic lighting",

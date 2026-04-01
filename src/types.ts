@@ -5,6 +5,7 @@ export interface GeneratedImage {
   series: string[];
   timestamp: number;
   metadata?: string;
+  audioUrl?: string;
 }
 
 export interface ReferenceImage {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Trash2, Download } from 'lucide-react';
+import { History, Trash2, Download, IterationCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GeneratedImage } from '../types';
 
@@ -7,12 +7,14 @@ interface HistorySectionProps {
   history: GeneratedImage[];
   setHistory: (val: GeneratedImage[]) => void;
   downloadImage: (image: GeneratedImage) => void;
+  onIterate: (image: GeneratedImage) => void;
 }
 
 export const HistorySection: React.FC<HistorySectionProps> = ({
   history,
   setHistory,
-  downloadImage
+  downloadImage,
+  onIterate
 }) => {
   if (history.length === 0) return null;
 
@@ -50,8 +52,16 @@ export const HistorySection: React.FC<HistorySectionProps> = ({
                 <button 
                   onClick={() => downloadImage(img)}
                   className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
+                  title="Download"
                 >
                   <Download className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => onIterate(img)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors"
+                  title="Iterate"
+                >
+                  <IterationCcw className="w-4 h-4" />
                 </button>
               </div>
               <div className="absolute bottom-2 left-2 right-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[8px] font-mono text-white/80 uppercase tracking-tighter truncate">

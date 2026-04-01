@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, AlertCircle, RefreshCw, Download, Scissors, Share2, Check, Twitter, Facebook, MessageCircle } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, AlertCircle, RefreshCw, Download, Scissors, Share2, Check, Twitter, Facebook, MessageCircle, Undo2, Redo2, IterationCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
@@ -9,27 +9,45 @@ import { compressImageForFirestore } from '../utils/imageProcessing';
 interface GeneratorSectionProps {
   customPrompt: string;
   setCustomPrompt: (val: string) => void;
+  commitPrompt: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   transparentBackground: boolean;
   setTransparentBackground: (val: boolean) => void;
+  generateMusic: boolean;
+  setGenerateMusic: (val: boolean) => void;
   isGenerating: boolean;
+  isGeneratingMusic: boolean;
   generateFusion: () => void;
   generatedImage: GeneratedImage | null;
   error: string | null;
   downloadImage: (image: GeneratedImage) => void;
   setIsEditing: (val: boolean) => void;
+  onIterate: (image: GeneratedImage) => void;
 }
 
 export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
   customPrompt,
   setCustomPrompt,
+  commitPrompt,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
   transparentBackground,
   setTransparentBackground,
+  generateMusic,
+  setGenerateMusic,
   isGenerating,
+  isGeneratingMusic,
   generateFusion,
   generatedImage,
   error,
   downloadImage,
-  setIsEditing
+  setIsEditing,
+  onIterate
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -96,6 +114,38 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
           Fusion Engine
         </h2>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 mr-4 border-r border-white/10 pr-4">
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Undo"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Redo"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer group mr-4 border-r border-white/10 pr-4">
+            <span className="text-xs font-mono text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300 transition-colors">
+              Music
+            </span>
+            <div 
+              onClick={() => setGenerateMusic(!generateMusic)}
+              className={`w-10 h-5 rounded-full p-1 transition-colors ${generateMusic ? 'bg-indigo-600' : 'bg-neutral-800'}`}
+            >
+              <motion.div 
+                animate={{ x: generateMusic ? 20 : 0 }}
+                className="w-3 h-3 bg-white rounded-full shadow-lg"
+              />
+            </div>
+          </label>
           <label className="flex items-center gap-3 cursor-pointer group">
             <span className="text-xs font-mono text-neutral-500 uppercase tracking-widest group-hover:text-neutral-300 transition-colors">
               Transparent BG
@@ -120,9 +170,11 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
               placeholder="Describe your fusion... (e.g., 'A character with Luffy's hat and Naruto's whiskers, wearing a Survey Corps cloak')"
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
+              onBlur={commitPrompt}
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                   e.preventDefault();
+                  commitPrompt();
                   if (!isGenerating) generateFusion();
                 }
               }}
@@ -201,6 +253,12 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
                       >
                         <Scissors className="w-4 h-4" /> Edit
                       </button>
+                      <button 
+                        onClick={() => onIterate(generatedImage)}
+                        className="p-3 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-md transition-colors flex items-center gap-2 text-xs font-bold"
+                      >
+                        <IterationCcw className="w-4 h-4" /> Iterate
+                      </button>
                     </div>
                     <div className="relative group/share">
                       <button 
@@ -243,6 +301,11 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
                     </div>
                   </div>
                 </motion.div>
+                {generatedImage.audioUrl && (
+                  <div className="mt-4">
+                    <audio controls className="w-full h-10" src={generatedImage.audioUrl} />
+                  </div>
+                )}
                 {generatedImage.metadata && (
                   <div className="mt-4">
                     <textarea
@@ -272,6 +335,14 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
               <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
               <p className="text-xs font-mono text-indigo-400 uppercase tracking-widest animate-pulse">
                 Processing Neural Fusion...
+              </p>
+            </div>
+          )}
+          {isGeneratingMusic && !isGenerating && (
+            <div className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+              <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+              <p className="text-xs font-mono text-emerald-400 uppercase tracking-widest animate-pulse">
+                Composing Anime Opening...
               </p>
             </div>
           )}
