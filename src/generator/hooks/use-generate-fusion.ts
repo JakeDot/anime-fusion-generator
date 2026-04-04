@@ -11,6 +11,7 @@ const API_KEY = process.env.GEMINI_API_KEY || "";
 interface UseGenerateFusionProps {
   selectedSeries: string[];
   customPrompt: string;
+  negativePrompt: string;
   referenceImages: ReferenceImage[];
   transparentBackground: boolean;
   generateMusic: boolean;
@@ -24,6 +25,7 @@ interface UseGenerateFusionProps {
 export function useGenerateFusion({
   selectedSeries,
   customPrompt,
+  negativePrompt,
   referenceImages,
   transparentBackground,
   generateMusic,
@@ -126,6 +128,16 @@ export function useGenerateFusion({
       if (customPrompt) {
         fullPrompt += `${customPrompt}. `;
       }
+
+      // Add weighting instructions if weights are detected
+      if (fullPrompt.includes(":")) {
+        fullPrompt += " INSTRUCTION: Interpret terms in (keyword:weight) format where weights > 1.0 mean more emphasis and < 1.0 mean less. ";
+      }
+
+      if (negativePrompt) {
+        fullPrompt += ` NEGATIVE PROMPT: Strictly exclude the following elements: ${negativePrompt}. `;
+      }
+
       if (referenceImages.length > 0) {
         fullPrompt += `CRITICAL: Combine the visual elements from ALL provided reference images into a single new composition. Do not just reproduce one of the images. `;
       }

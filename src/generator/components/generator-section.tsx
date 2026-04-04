@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Wand2, Loader2, AlertCircle, RefreshCw, Download, Scissors, Share2, Check, Twitter, Facebook, MessageCircle, Undo2, Redo2, IterationCcw, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -9,6 +9,8 @@ import { compressImageForFirestore } from '../utils/image-processing';
 interface GeneratorSectionProps {
   customPrompt: string;
   setCustomPrompt: (val: string) => void;
+  negativePrompt: string;
+  setNegativePrompt: (val: string) => void;
   commitPrompt: () => void;
   undo: () => void;
   redo: () => void;
@@ -33,6 +35,8 @@ interface GeneratorSectionProps {
 export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
   customPrompt,
   setCustomPrompt,
+  negativePrompt,
+  setNegativePrompt,
   commitPrompt,
   undo,
   redo,
@@ -55,25 +59,39 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [showAdvancedInfo, setShowAdvancedInfo] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(null);
+
+  // Reset shareId when image changes
+  useEffect(() => {
+    setShareId(null);
+  }, [generatedImage?.id]);
 
   const handleShare = async (platform: 'x' | 'facebook' | 'whatsapp' | 'native' = 'native') => {
     if (!generatedImage || isSharing) return;
     setIsSharing(true);
     
     try {
-      // Compress image to ensure it fits within Firestore's 1MB document limit
-      const compressedImageUrl = await compressImageForFirestore(generatedImage.url);
+      let currentShareId = shareId;
 
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, 'fusions'), {
-        prompt: generatedImage.prompt,
-        series: generatedImage.series,
-        imageUrl: compressedImageUrl,
-        createdAt: serverTimestamp(),
-        authorId: auth.currentUser?.uid || 'anonymous'
-      });
+      if (!currentShareId) {
+        // Compress image to ensure it fits within Firestore's 1MB document limit
+        const compressedImageUrl = await compressImageForFirestore(generatedImage.url);
 
-      const shareUrl = `${window.location.origin}/share/${docRef.id}`;
+        // Save to Firestore
+        const docRef = await addDoc(collection(db, 'fusions'), {
+          prompt: generatedImage.prompt,
+          series: generatedImage.series,
+          imageUrl: compressedImageUrl,
+          createdAt: serverTimestamp(),
+          authorId: auth.currentUser?.uid || 'anonymous'
+        });
+        
+        currentShareId = docRef.id;
+        setShareId(currentShareId);
+      }
+
+      const shareUrl = `${window.location.origin}/share/${currentShareId}`;
       const text = `Check out this anime fusion: ${generatedImage.prompt}`;
       
       if (platform === 'x') {
@@ -104,7 +122,6 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
       }
     } catch (err) {
       console.error("Failed to share:", err);
-      alert("Failed to generate share link. The image might be too large.");
     } finally {
       setIsSharing(false);
     }
@@ -118,6 +135,13 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
           Fusion Engine
         </h2>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowAdvancedInfo(!showAdvancedInfo)}
+            className={`p-2 rounded-xl transition-colors ${showAdvancedInfo ? 'bg-indigo-600 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700'}`}
+            title="Advanced Prompting Info"
+          >
+            <AlertCircle className="w-4 h-4" />
+          </button>
           <button
             onClick={onSettingsClick}
             className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors mr-2"
@@ -174,26 +198,67 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
         </div>
       </div>
 
+      <AnimatePresence>
+        {showAdvancedInfo && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-6 overflow-hidden"
+          >
+            <div className="p-6 bg-indigo-600/10 border border-indigo-500/20 rounded-3xl space-y-4">
+              <h3 className="text-sm font-bold text-indigo-400 uppercase tracking-widest">Advanced Prompting Guide</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-neutral-400 leading-relaxed">
+                <div>
+                  <p className="font-bold text-neutral-200 mb-1">Weighted Keywords</p>
+                  <p>Use <code className="text-indigo-400 font-mono">(keyword:weight)</code> to emphasize elements. Weights above 1.0 increase importance, below 1.0 decrease it.</p>
+                  <p className="mt-2 font-mono text-[10px]">Example: (cyberpunk:1.5), (vintage:0.5)</p>
+                </div>
+                <div>
+                  <p className="font-bold text-neutral-200 mb-1">Negative Prompts</p>
+                  <p>Use the negative prompt field to specify elements you want to EXCLUDE from the neural synthesis.</p>
+                  <p className="mt-2 font-mono text-[10px]">Example: blurry, low quality, extra limbs, text</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <div className="relative group">
-            <textarea 
-              placeholder="Describe your fusion... (e.g., 'A character with Luffy's hat and Naruto's whiskers, wearing a Survey Corps cloak')"
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              onBlur={commitPrompt}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                  e.preventDefault();
-                  commitPrompt();
-                  if (!isGenerating) generateFusion();
-                }
-              }}
-              className="w-full h-48 bg-neutral-900/50 border border-white/5 rounded-3xl p-6 text-sm focus:outline-none focus:border-indigo-500/50 transition-all resize-none group-hover:bg-neutral-800/50"
-            />
-            <div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] font-mono text-neutral-600 uppercase tracking-widest">
-              <span>Prompt Engineering</span>
-              <span className="px-1.5 py-0.5 bg-neutral-800 rounded-md border border-white/5">Ctrl+Enter</span>
+          <div className="space-y-4">
+            <div className="relative group">
+              <textarea 
+                placeholder="Describe your fusion... (e.g., 'A character with Luffy's hat and Naruto's whiskers, wearing a Survey Corps cloak')"
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                onBlur={commitPrompt}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    commitPrompt();
+                    if (!isGenerating) generateFusion();
+                  }
+                }}
+                className="w-full h-48 bg-neutral-900/50 border border-white/5 rounded-3xl p-6 text-sm focus:outline-none focus:border-indigo-500/50 transition-all resize-none group-hover:bg-neutral-800/50"
+              />
+              <div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] font-mono text-neutral-600 uppercase tracking-widest">
+                <span>Prompt Engineering</span>
+                <span className="px-1.5 py-0.5 bg-neutral-800 rounded-md border border-white/5">Ctrl+Enter</span>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <textarea 
+                placeholder="Negative Prompt: What to exclude... (e.g., 'blurry, low quality, distorted hands')"
+                value={negativePrompt}
+                onChange={(e) => setNegativePrompt(e.target.value)}
+                className="w-full h-24 bg-neutral-900/50 border border-white/5 rounded-3xl p-6 text-sm focus:outline-none focus:border-red-500/30 transition-all resize-none group-hover:bg-neutral-800/50"
+              />
+              <div className="absolute bottom-4 right-4 flex items-center gap-2 text-[10px] font-mono text-red-900/50 uppercase tracking-widest">
+                <span>Negative Space</span>
+              </div>
             </div>
           </div>
 
@@ -389,6 +454,61 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
             </div>
           )}
         </div>
+
+        {/* Social Sharing Bar */}
+        <AnimatePresence>
+          {generatedImage && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mt-6 p-6 bg-neutral-900/50 border border-white/5 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6"
+            >
+              <div className="flex flex-col gap-1">
+                <h3 className="text-sm font-bold text-neutral-200">Share your Fusion</h3>
+                <p className="text-xs text-neutral-500">Let the world see your creation</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => handleShare('x')}
+                  disabled={isSharing}
+                  className="p-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white rounded-2xl transition-all hover:scale-110 disabled:opacity-50"
+                  title="Share on X"
+                >
+                  <Twitter className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => handleShare('facebook')}
+                  disabled={isSharing}
+                  className="p-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white rounded-2xl transition-all hover:scale-110 disabled:opacity-50"
+                  title="Share on Facebook"
+                >
+                  <Facebook className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => handleShare('whatsapp')}
+                  disabled={isSharing}
+                  className="p-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white rounded-2xl transition-all hover:scale-110 disabled:opacity-50"
+                  title="Share on WhatsApp"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                </button>
+                <div className="w-px h-8 bg-white/10 mx-1" />
+                <button 
+                  onClick={() => handleShare('native')}
+                  disabled={isSharing}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs flex items-center gap-2 transition-all hover:shadow-lg hover:shadow-indigo-600/20 disabled:opacity-50"
+                >
+                  {isCopied ? (
+                    <><Check className="w-4 h-4" /> Copied!</>
+                  ) : (
+                    <><Share2 className="w-4 h-4" /> Copy Link</>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );

@@ -31,6 +31,7 @@ export function GeneratorPage() {
   const [customSeries, setCustomSeries] = useState<string[]>([]);
   const [newSeriesName, setNewSeriesName] = useState("");
   const [promptPrefix, setPromptPrefix] = useState("");
+  const [negativePrompt, setNegativePrompt] = useState("");
   const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('gemini_api_key') || "");
   const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_model') || "gemini-2.5-flash-image");
   const [transparentBackground, setTransparentBackground] = useState(false);
@@ -73,6 +74,7 @@ export function GeneratorPage() {
   } = useGenerateFusion({
     selectedSeries,
     customPrompt,
+    negativePrompt,
     referenceImages,
     transparentBackground,
     generateMusic,
@@ -147,6 +149,8 @@ export function GeneratorPage() {
         <GeneratorSection 
           customPrompt={customPrompt}
           setCustomPrompt={setCustomPrompt}
+          negativePrompt={negativePrompt}
+          setNegativePrompt={setNegativePrompt}
           commitPrompt={commitUndoState}
           undo={undo}
           redo={redo}
