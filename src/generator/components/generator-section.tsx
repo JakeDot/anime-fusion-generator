@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Sparkles, Wand2, Loader2, AlertCircle, RefreshCw, Download, Scissors, Share2, Check, Twitter, Facebook, MessageCircle, Undo2, Redo2, IterationCcw } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, AlertCircle, RefreshCw, Download, Scissors, Share2, Check, Twitter, Facebook, MessageCircle, Undo2, Redo2, IterationCcw, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 import { GeneratedImage } from '../../types';
-import { compressImageForFirestore } from '../utils/imageProcessing';
+import { compressImageForFirestore } from '../utils/image-processing';
 
 interface GeneratorSectionProps {
   customPrompt: string;
@@ -26,6 +26,7 @@ interface GeneratorSectionProps {
   downloadImage: (image: GeneratedImage) => void;
   setIsEditing: (val: boolean) => void;
   onIterate: (image: GeneratedImage) => void;
+  onSettingsClick: () => void;
 }
 
 export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
@@ -47,7 +48,8 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
   error,
   downloadImage,
   setIsEditing,
-  onIterate
+  onIterate,
+  onSettingsClick
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -114,6 +116,13 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
           Fusion Engine
         </h2>
         <div className="flex items-center gap-4">
+          <button
+            onClick={onSettingsClick}
+            className="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-700 transition-colors mr-2"
+            title="Settings"
+          >
+            <Settings2 className="w-4 h-4" />
+          </button>
           <div className="flex items-center gap-2 mr-4 border-r border-white/10 pr-4">
             <button
               onClick={undo}
@@ -237,7 +246,7 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
                   <img 
                     src={generatedImage.url} 
                     alt="Generated Fusion" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between gap-4">
                     <div className="flex gap-2">

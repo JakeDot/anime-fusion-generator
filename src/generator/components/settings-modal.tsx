@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Type, Key, Clock } from 'lucide-react';
+import { X, Type, Key, Clock, Cpu } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -8,6 +8,8 @@ interface SettingsModalProps {
   setPromptPrefix: (prefix: string) => void;
   userApiKey: string;
   setUserApiKey: (key: string) => void;
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -17,6 +19,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   setPromptPrefix,
   userApiKey,
   setUserApiKey,
+  selectedModel,
+  setSelectedModel,
 }) => {
   const [autoDreamEnabled, setAutoDreamEnabled] = useState(false);
 
@@ -60,6 +64,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Cpu className="w-4 h-4" />
+                Synthesis Model
+              </label>
+              <div className="relative group">
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm focus:outline-none focus:border-indigo-500/50 transition-all appearance-none"
+                >
+                  <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image (Fast)</option>
+                  <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image Preview (High Quality)</option>
+                  <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image Preview (Pro)</option>
+                </select>
+                <div className="absolute inset-0 rounded-2xl bg-indigo-500/5 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity" />
+              </div>
+              <p className="mt-2 text-[10px] text-neutral-500 font-mono leading-relaxed uppercase tracking-wider">
+                Select the neural engine used for image synthesis.
+              </p>
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-neutral-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Key className="w-4 h-4" />

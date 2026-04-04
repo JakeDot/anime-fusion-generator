@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ onSettingsClick }) => {
         <img 
           src="/logo-jakedot.png" 
           alt="Jakedot Logo" 
-          className="h-8 w-auto opacity-60 hover:opacity-100 transition-opacity" 
+          className="h-12 w-auto opacity-80 hover:opacity-100 transition-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
           referrerPolicy="no-referrer" 
         />
       </div>

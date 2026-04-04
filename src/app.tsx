@@ -1,8 +1,8 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { GeneratorPage } from './generator/GeneratorPage';
-import { SharePage } from './share/SharePage';
-import { useAutoDream } from './auto/useAutoDream';
+import { GeneratorPage } from './generator/generator-page';
+import { SharePage } from './share/share-page';
+import { useAutoDream } from './auto/use-auto-dream';
 
 export default function App() {
   // Initialize the auto dream service
