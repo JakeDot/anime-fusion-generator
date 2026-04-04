@@ -79,7 +79,7 @@ export const ImpressumModal: React.FC<ImpressumModalProps> = ({
                     </div>
                     <div>
                       <p className="text-xs font-bold">Synthesis Engine</p>
-                      <p className="text-[10px] text-neutral-500 uppercase font-mono">Neural Fusion v0.5</p>
+                      <p className="text-[10px] text-neutral-500 uppercase font-mono">Neural Fusion v0.6</p>
                     </div>
                   </div>
                 </div>

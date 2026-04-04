@@ -87,7 +87,7 @@ export const Footer: React.FC<FooterProps> = ({ onStatusClick, onImpressumClick 
         </div>
         <div className="text-left">
           <p className="text-xs font-bold text-neutral-400">ANIME FUSION GENERATOR</p>
-          <p className="text-[10px] font-mono uppercase tracking-widest">v0.5 Neural Synthesis</p>
+          <p className="text-[10px] font-mono uppercase tracking-widest">v0.6 Neural Synthesis</p>
         </div>
       </div>
       <div className="flex items-center gap-8 text-[10px] font-mono uppercase tracking-widest">

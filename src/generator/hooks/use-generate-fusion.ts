@@ -36,6 +36,7 @@ export function useGenerateFusion({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
+  const [draftImage, setDraftImage] = useState<string | null>(null);
   const [history, setHistory] = useState<GeneratedImage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,6 +99,7 @@ export function useGenerateFusion({
     }
 
     setIsGenerating(true);
+    setDraftImage(null);
     setError(null);
 
     try {
@@ -143,9 +145,34 @@ export function useGenerateFusion({
       });
       parts.push({ text: fullPrompt });
 
+      // STEP 1: Generate Draft
+      const draftParts = [...parts, { text: "Generate a fast, low-detail conceptual draft of: " + fullPrompt }];
+      const draftResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: { parts: draftParts },
+      });
+
+      let draftBase64 = "";
+      for (const part of draftResponse.candidates[0].content.parts) {
+        if (part.inlineData) {
+          draftBase64 = part.inlineData.data;
+          break;
+        }
+      }
+
+      if (!draftBase64) throw new Error("No draft image data received.");
+      const draftUrl = `data:image/png;base64,${draftBase64}`;
+      setDraftImage(draftUrl);
+
+      // STEP 2: Generate Final
+      const finalParts = [
+        { inlineData: { data: draftBase64, mimeType: "image/png" } },
+        { text: "Use this draft image as the exact base composition. Enhance, refine, and render it in extremely high quality and detail based on this description: " + fullPrompt }
+      ];
+
       const response = await ai.models.generateContent({
         model: selectedModel,
-        contents: { parts },
+        contents: { parts: finalParts },
       });
 
       let base64Data = "";
@@ -243,6 +270,7 @@ export function useGenerateFusion({
       setError(err.message || "Failed to generate image.");
     } finally {
       setIsGenerating(false);
+      setDraftImage(null);
     }
   };
 
@@ -250,6 +278,7 @@ export function useGenerateFusion({
     isGenerating,
     isGeneratingMusic,
     generatedImage,
+    draftImage,
     history,
     setHistory,
     error,

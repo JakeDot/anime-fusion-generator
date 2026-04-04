@@ -63,6 +63,7 @@ export function GeneratorPage() {
     isGenerating,
     isGeneratingMusic,
     generatedImage,
+    draftImage,
     history,
     setHistory,
     error,
@@ -159,6 +160,7 @@ export function GeneratorPage() {
           isGeneratingMusic={isGeneratingMusic}
           generateFusion={generateFusion}
           generatedImage={generatedImage}
+          draftImage={draftImage}
           error={error}
           downloadImage={downloadImage}
           setIsEditing={setIsEditing}
