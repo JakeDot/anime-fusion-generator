@@ -87,12 +87,11 @@ export const Footer: React.FC<FooterProps> = ({ onStatusClick, onImpressumClick 
         </div>
         <div className="text-left">
           <p className="text-xs font-bold text-neutral-400">ANIME FUSION GENERATOR</p>
-          <p className="text-[10px] font-mono uppercase tracking-widest">v0.6 Neural Synthesis</p>
+          <p className="text-[10px] font-mono uppercase tracking-widest">v0.7.0 Public API</p>
         </div>
       </div>
       <div className="flex items-center gap-8 text-[10px] font-mono uppercase tracking-widest">
-        <a href="#" className="hover:text-indigo-400 transition-colors">Privacy</a>
-        <a href="#" className="hover:text-indigo-400 transition-colors">Terms</a>
+        <a href="/API_DOCUMENTATION.md" target="_blank" className="hover:text-indigo-400 transition-colors">API Docs</a>
         <button 
           onClick={(e) => {
             e.preventDefault();

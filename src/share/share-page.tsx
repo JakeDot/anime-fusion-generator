@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { Loader2, AlertCircle, ArrowLeft, Download, Share2, Check, Twitter, Facebook, MessageCircle } from 'lucide-react';
 import { motion } from 'motion/react';
+import { loadShardedImage } from '../utils/firestore-sharding';
 
 export const SharePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,17 +15,15 @@ export const SharePage: React.FC = () => {
     const fetchFusion = async () => {
       if (!id) return;
       try {
-        const docRef = doc(db, 'fusions', id);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          setFusion(docSnap.data());
-        } else {
-          setError("Fusion not found. The link might be broken or the image was removed.");
-        }
-      } catch (err) {
+        const data = await loadShardedImage('fusions', id);
+        setFusion(data);
+      } catch (err: any) {
         console.error("Error fetching fusion:", err);
-        setError("Failed to load the fusion. Please try again later.");
+        if (err.message === "Document not found") {
+          setError("Fusion not found. The link might be broken or the image was removed.");
+        } else {
+          setError("Failed to load the fusion. Please try again later.");
+        }
       } finally {
         setLoading(false);
       }

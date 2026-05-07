@@ -20,3 +20,13 @@ export interface Series {
   icon: string;
   color: string;
 }
+
+export interface ExternalModelsConfig {
+  claudeApiKey: string;
+  githubCopilotToken: string;
+  microsoftCopilotToken: string;
+  piAgentToken: string;
+  piAgentEndpoint?: string;
+  piAgentModel?: string;
+  activeSubtaskModel: string;
+}

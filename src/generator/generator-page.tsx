@@ -17,6 +17,7 @@ import { useUndoRedo } from './hooks/use-undo-redo';
 import { useImageUpload } from './hooks/use-image-upload';
 import { useGenerateFusion } from './hooks/use-generate-fusion';
 import { DynamicBackground } from './components/dynamic-background';
+import { ExternalModelsConfig } from '../types';
 
 import PREDEFINED_SERIES from '../series/series.json';
 
@@ -37,6 +38,29 @@ export function GeneratorPage() {
   const [transparentBackground, setTransparentBackground] = useState(false);
   const [generateMusic, setGenerateMusic] = useState(false);
   
+  const [externalModelsConfig, setExternalModelsConfig] = useState<ExternalModelsConfig>(() => {
+    const saved = localStorage.getItem('external_models_config');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      claudeApiKey: '',
+      githubCopilotToken: '',
+      microsoftCopilotToken: '',
+      piAgentToken: '',
+      piAgentEndpoint: 'http://localhost:11434/v1',
+      piAgentModel: 'llama3',
+      activeSubtaskModel: 'none'
+    };
+  });
+
+  const handleSetExternalModelsConfig = (config: ExternalModelsConfig) => {
+    setExternalModelsConfig(config);
+    localStorage.setItem('external_models_config', JSON.stringify(config));
+  };
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isImpressumOpen, setIsImpressumOpen] = useState(false);
@@ -63,6 +87,7 @@ export function GeneratorPage() {
   const {
     isGenerating,
     isGeneratingMusic,
+    generationStatus,
     generatedImage,
     draftImage,
     history,
@@ -70,7 +95,8 @@ export function GeneratorPage() {
     error,
     generateFusion,
     downloadImage,
-    handleIterate
+    handleIterate,
+    handleUpscale
   } = useGenerateFusion({
     selectedSeries,
     customPrompt,
@@ -82,7 +108,8 @@ export function GeneratorPage() {
     selectedModel,
     promptPrefix,
     setReferenceImages,
-    setAndCommit
+    setAndCommit,
+    externalModelsConfig
   });
 
   // --- Handlers ---
@@ -162,6 +189,7 @@ export function GeneratorPage() {
           setGenerateMusic={setGenerateMusic}
           isGenerating={isGenerating}
           isGeneratingMusic={isGeneratingMusic}
+          generationStatus={generationStatus}
           generateFusion={generateFusion}
           generatedImage={generatedImage}
           draftImage={draftImage}
@@ -169,6 +197,7 @@ export function GeneratorPage() {
           downloadImage={downloadImage}
           setIsEditing={setIsEditing}
           onIterate={handleIterate}
+          onUpscale={handleUpscale}
           onSettingsClick={() => setIsSettingsOpen(true)}
         />
 
@@ -215,6 +244,8 @@ export function GeneratorPage() {
           setSelectedModel(model);
           localStorage.setItem('gemini_model', model);
         }}
+        externalModelsConfig={externalModelsConfig}
+        setExternalModelsConfig={handleSetExternalModelsConfig}
       />
 
       <StatusModal 

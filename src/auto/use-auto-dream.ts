@@ -3,6 +3,8 @@ import { GoogleGenAI } from "@google/genai";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import PREDEFINED_SERIES from '../series/series.json';
+import { handleFirestoreError, OperationType } from '../utils/firestore-error';
+import { compressImageForFirestore } from '../generator/utils/image-processing';
 
 const PROMPT_TEMPLATES = [
   "Epic battle scene with dynamic lighting",
@@ -28,8 +30,19 @@ export function useAutoDream() {
       const oneHour = 60 * 60 * 1000;
 
       if (!lastRun || now - parseInt(lastRun) >= oneHour) {
-        await generateAutoDream();
-        localStorage.setItem('auto_dream_last_run', now.toString());
+        if (navigator.locks) {
+          await navigator.locks.request('auto-dream-lock', { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+            if (!lock) {
+              console.log("AutoDream: Another tab is currently generating.");
+              return;
+            }
+            await generateAutoDream();
+            localStorage.setItem('auto_dream_last_run', now.toString());
+          });
+        } else {
+          await generateAutoDream();
+          localStorage.setItem('auto_dream_last_run', now.toString());
+        }
       }
     };
 
@@ -80,17 +93,22 @@ async function generateAutoDream() {
 
     if (!base64Data) throw new Error("No image data received.");
 
-    const imageUrl = `data:image/png;base64,${base64Data}`;
+    const rawImageUrl = `data:image/png;base64,${base64Data}`;
+    const compressedImageUrl = await compressImageForFirestore(rawImageUrl);
 
     // Save to Firestore
-    await addDoc(collection(db, 'fusions'), {
-      prompt: fullPrompt,
-      series: selectedSeries,
-      imageUrl: imageUrl,
-      createdAt: serverTimestamp(),
-      authorId: auth.currentUser?.uid || 'auto-dreamer',
-      isAutoDream: true
-    });
+    try {
+      await addDoc(collection(db, 'fusions'), {
+        prompt: fullPrompt,
+        series: selectedSeries,
+        imageUrl: compressedImageUrl,
+        createdAt: serverTimestamp(),
+        authorId: auth.currentUser?.uid || 'auto-dreamer',
+        isAutoDream: true
+      });
+    } catch (error) {
+      console.error("Failed to save AutoDream to Firestore:", error);
+    }
 
     console.log("AutoDream: Successfully generated and saved a new dream.");
   } catch (err) {

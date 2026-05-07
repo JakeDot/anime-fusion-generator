@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import { GeneratedImage, ReferenceImage } from '../../types';
+import { GeneratedImage, ReferenceImage, ExternalModelsConfig } from '../../types';
 import { injectMetadata } from '../utils/png-metadata';
 import { processTransparency } from '../utils/image-processing';
 import metadata from '../../../metadata.json';
-import PREDEFINED_SERIES from '../../series/series.json';
+import { buildGenerationPrompt } from '../utils/prompt-builder';
+import { delegateSubtaskToExternalModel } from '../../utils/external-ai';
 
 const API_KEY = process.env.GEMINI_API_KEY || "";
 
@@ -20,6 +21,7 @@ interface UseGenerateFusionProps {
   promptPrefix: string;
   setReferenceImages: React.Dispatch<React.SetStateAction<ReferenceImage[]>>;
   setAndCommit: (state: any) => void;
+  externalModelsConfig: ExternalModelsConfig;
 }
 
 export function useGenerateFusion({
@@ -33,10 +35,12 @@ export function useGenerateFusion({
   selectedModel,
   promptPrefix,
   setReferenceImages,
-  setAndCommit
+  setAndCommit,
+  externalModelsConfig
 }: UseGenerateFusionProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [draftImage, setDraftImage] = useState<string | null>(null);
   const [history, setHistory] = useState<GeneratedImage[]>([]);
@@ -94,6 +98,56 @@ export function useGenerateFusion({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleUpscale = async (image: GeneratedImage) => {
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const activeApiKey = userApiKey.trim() || API_KEY;
+      const ai = new GoogleGenAI({ apiKey: activeApiKey });
+      
+      const [mimePart, data] = image.url.split(';base64,');
+      const mimeType = mimePart.split(':')[1];
+
+      const upscaleParts = [
+        { inlineData: { data: data, mimeType: mimeType } },
+        { text: "Upscale this image to high resolution, enhance details, sharp, masterpiece, 4k quality." }
+      ];
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: { parts: upscaleParts },
+      });
+
+      let base64Data = "";
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          base64Data = part.inlineData.data;
+          break;
+        }
+      }
+
+      if (!base64Data) throw new Error("No upscaled image data received.");
+
+      const upscaledUrl = `data:image/png;base64,${base64Data}`;
+
+      const upscaledImage: GeneratedImage = {
+        ...image,
+        id: Date.now().toString(),
+        url: upscaledUrl,
+        prompt: image.prompt + " (Upscaled)",
+        timestamp: Date.now(),
+      };
+
+      setGeneratedImage(upscaledImage);
+      setHistory(prev => [upscaledImage, ...prev]);
+    } catch (err: any) {
+      console.error("Upscale error:", err);
+      setError(err.message || "Failed to upscale image.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const generateFusion = async () => {
     if (selectedSeries.length === 0 && !customPrompt && referenceImages.length === 0) {
       setError("Please select a series, enter a prompt, or upload an image.");
@@ -108,43 +162,27 @@ export function useGenerateFusion({
       const activeApiKey = userApiKey.trim() || API_KEY;
       const ai = new GoogleGenAI({ apiKey: activeApiKey });
       
-      const selectedPredefined = selectedSeries
-        .filter(id => !id.startsWith('custom-'))
-        .map(id => PREDEFINED_SERIES.find(s => s.id === id)?.name);
-      
-      const selectedCustom = selectedSeries
-        .filter(id => id.startsWith('custom-'))
-        .map(id => id.replace('custom-', ''));
-
-      const allSeries = [...selectedPredefined, ...selectedCustom].join(", ");
-      
-      let fullPrompt = "";
-      if (promptPrefix) {
-        fullPrompt += `${promptPrefix.trim()} `;
+      const fullPrompt = buildGenerationPrompt({
+        selectedSeries,
+        customPrompt,
+        negativePrompt,
+        promptPrefix,
+        transparentBackground,
+        hasReferenceImages: referenceImages.length > 0
+      });
+ 
+      let finalPrompt = fullPrompt;
+      if (externalModelsConfig && externalModelsConfig.activeSubtaskModel !== 'none') {
+        setGenerationStatus(`Delegating prompt enhancement to ${externalModelsConfig.activeSubtaskModel}...`);
+        try {
+          finalPrompt = await delegateSubtaskToExternalModel(fullPrompt, externalModelsConfig);
+          console.log("Enhanced prompt:", finalPrompt);
+        } catch (err: any) {
+          console.warn("External model subtask failed, falling back to original prompt", err);
+          setError(`Subtask failed: ${err.message}. Falling back to direct generation.`);
+        }
+        setGenerationStatus(null);
       }
-      if (allSeries) {
-        fullPrompt += `Anime style fusion of ${allSeries}. `;
-      }
-      if (customPrompt) {
-        fullPrompt += `${customPrompt}. `;
-      }
-
-      // Add weighting instructions if weights are detected
-      if (fullPrompt.includes(":")) {
-        fullPrompt += " INSTRUCTION: Interpret terms in (keyword:weight) format where weights > 1.0 mean more emphasis and < 1.0 mean less. ";
-      }
-
-      if (negativePrompt) {
-        fullPrompt += ` NEGATIVE PROMPT: Strictly exclude the following elements: ${negativePrompt}. `;
-      }
-
-      if (referenceImages.length > 0) {
-        fullPrompt += `CRITICAL: Combine the visual elements from ALL provided reference images into a single new composition. Do not just reproduce one of the images. `;
-      }
-      if (transparentBackground) {
-        fullPrompt += "The subject should be on a plain white background for easy transparency removal. ";
-      }
-      fullPrompt += "High quality, detailed anime art.";
 
       const parts: any[] = [];
       referenceImages.forEach(img => {
@@ -155,10 +193,10 @@ export function useGenerateFusion({
           }
         });
       });
-      parts.push({ text: fullPrompt });
+      parts.push({ text: finalPrompt });
 
       // STEP 1: Generate Draft
-      const draftParts = [...parts, { text: "Generate a fast, low-detail conceptual draft of: " + fullPrompt }];
+      const draftParts = [...parts, { text: "Generate a fast, low-detail conceptual draft of: " + finalPrompt }];
       const draftResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents: { parts: draftParts },
@@ -179,7 +217,7 @@ export function useGenerateFusion({
       // STEP 2: Generate Final
       const finalParts = [
         { inlineData: { data: draftBase64, mimeType: "image/png" } },
-        { text: "Use this draft image as the exact base composition. Enhance, refine, and render it in extremely high quality and detail based on this description: " + fullPrompt }
+        { text: "Use this draft image as the exact base composition. Enhance, refine, and render it in extremely high quality and detail based on this description: " + finalPrompt }
       ];
 
       const response = await ai.models.generateContent({
@@ -208,7 +246,7 @@ export function useGenerateFusion({
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
         url: imageUrl,
-        prompt: fullPrompt,
+        prompt: finalPrompt,
         series: [...selectedSeries],
         timestamp: Date.now(),
         metadata: responseMetadata,
@@ -289,6 +327,7 @@ export function useGenerateFusion({
   return {
     isGenerating,
     isGeneratingMusic,
+    generationStatus,
     generatedImage,
     draftImage,
     history,
@@ -296,6 +335,7 @@ export function useGenerateFusion({
     error,
     generateFusion,
     downloadImage,
-    handleIterate
+    handleIterate,
+    handleUpscale
   };
 }

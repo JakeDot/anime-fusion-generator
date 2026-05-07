@@ -2,6 +2,6 @@
   "id": "@jakedot/anime-fusion-generator",
   "name": "Anime Fusion Generator",
   "description": "Generate images in a unique anime style blending Attack on Titan, Harry Potter, Demon Slayer, and more.",
-  "version": "0.5",
+  "version": "0.7.0",
   "requestFramePermissions": []
 }
