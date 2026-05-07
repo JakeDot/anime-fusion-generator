@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { X, Activity, CheckCircle2, AlertCircle, Loader2, Server } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 
 interface StatusModalProps {
   isOpen: boolean;
@@ -20,21 +19,12 @@ export const StatusModal: React.FC<StatusModalProps> = ({
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const checkStatus = async () => {
-    if (!apiKey) {
-      setStatus('error');
-      return;
-    }
-
     setStatus('checking');
     const startTime = performance.now();
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      // Simple lightweight check - list models or just a tiny prompt
-      await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: "ping",
-      });
+      const res = await fetch("/api/health");
+      if (!res.ok) throw new Error("Health check failed");
       
       const endTime = performance.now();
       setLatency(Math.round(endTime - startTime));

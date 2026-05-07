@@ -144,6 +144,80 @@ async function startServer() {
     }
   });
 
+  app.post("/api/upscale", async (req: Request, res: Response) => {
+    try {
+      const { image, apiKey } = req.body;
+      const activeApiKey = apiKey || API_KEY;
+      if (!activeApiKey) return res.status(401).json({ error: "Missing API Key" });
+
+      const ai = new GoogleGenAI({ apiKey: activeApiKey });
+
+      const [mimePart, data] = image.url.split(';base64,');
+      const mimeType = mimePart.split(':')[1];
+
+      const upscaleParts = [
+        { inlineData: { data: data, mimeType: mimeType } },
+        { text: "Upscale this image to high resolution, enhance details, sharp, masterpiece, 4k quality." }
+      ];
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: { parts: upscaleParts },
+      });
+
+      let base64Data = "";
+      for (const part of response.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData) {
+          base64Data = part.inlineData.data;
+          break;
+        }
+      }
+
+      if (!base64Data) throw new Error("No upscaled image data received.");
+      res.json({ url: `data:image/png;base64,${base64Data}` });
+    } catch (err: any) {
+      console.error("Upscale error:", err);
+      res.status(500).json({ error: err.message || "Internal Server Error" });
+    }
+  });
+
+  app.post("/api/music", async (req: Request, res: Response) => {
+    try {
+      const { prompt, imageBase64, apiKey } = req.body;
+      const activeApiKey = apiKey || API_KEY;
+      if (!activeApiKey) return res.status(401).json({ error: "Missing API Key" });
+
+      const musicAi = new GoogleGenAI({ apiKey: activeApiKey });
+      const musicResponse = await musicAi.models.generateContent({
+        model: "lyria-3-clip-preview",
+        contents: {
+          parts: [
+            { text: `Generate a 30-second anime opening style track inspired by this image and prompt: ${prompt}` },
+            { inlineData: { data: imageBase64, mimeType: "image/png" } },
+          ],
+        },
+      });
+
+      let audioBase64 = "";
+      let audioMimeType = "audio/wav";
+
+      for (const part of musicResponse.candidates?.[0]?.content?.parts || []) {
+        if (part.inlineData?.data) {
+          if (!audioBase64 && part.inlineData.mimeType) {
+            audioMimeType = part.inlineData.mimeType;
+          }
+          audioBase64 += part.inlineData.data;
+        }
+      }
+
+      if (!audioBase64) throw new Error("Failed to generate music.");
+      res.json({ audioBase64, audioMimeType });
+    } catch (err: any) {
+      console.error("Music generation error:", err);
+      res.status(500).json({ error: err.message || "Internal Server Error" });
+    }
+  });
+
   // Vite middleware setup
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

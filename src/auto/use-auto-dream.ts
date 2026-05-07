@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import PREDEFINED_SERIES from '../series/series.json';
@@ -60,47 +59,40 @@ export function useAutoDream() {
 
 async function generateAutoDream() {
   const apiKey = localStorage.getItem('gemini_api_key') || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn("AutoDream: No API key available.");
-    return;
-  }
 
   try {
     console.log("AutoDream: Generating new dream...");
-    const ai = new GoogleGenAI({ apiKey });
 
     // Pick 2 random series
     const shuffledSeries = [...PREDEFINED_SERIES].sort(() => 0.5 - Math.random());
-    const selectedSeries = [shuffledSeries[0].name, shuffledSeries[1].name];
+    const selectedSeriesNames = [shuffledSeries[0].id, shuffledSeries[1].id];
     
     // Pick a random prompt template
     const template = PROMPT_TEMPLATES[Math.floor(Math.random() * PROMPT_TEMPLATES.length)];
 
-    const fullPrompt = `Anime style fusion of ${selectedSeries.join(" and ")}. ${template}. High quality, detailed anime art.`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
-      contents: fullPrompt,
+    const res = await fetch('/api/generate', {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        series: selectedSeriesNames,
+        prompt: template,
+        apiKey: apiKey || ""
+      })
     });
 
-    let base64Data = "";
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        base64Data = part.inlineData.data;
-        break;
-      }
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to generate image.");
     }
 
-    if (!base64Data) throw new Error("No image data received.");
-
-    const rawImageUrl = `data:image/png;base64,${base64Data}`;
+    const { url: rawImageUrl, prompt: fullPrompt } = await res.json();
     const compressedImageUrl = await compressImageForFirestore(rawImageUrl);
 
     // Save to Firestore
     try {
       await addDoc(collection(db, 'fusions'), {
         prompt: fullPrompt,
-        series: selectedSeries,
+        series: selectedSeriesNames,
         imageUrl: compressedImageUrl,
         createdAt: serverTimestamp(),
         authorId: auth.currentUser?.uid || 'auto-dreamer',

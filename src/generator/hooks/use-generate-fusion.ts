@@ -102,33 +102,20 @@ export function useGenerateFusion({
     setIsGenerating(true);
     setError(null);
     try {
-      const activeApiKey = userApiKey.trim() || API_KEY;
-      const ai = new GoogleGenAI({ apiKey: activeApiKey });
-      
-      const [mimePart, data] = image.url.split(';base64,');
-      const mimeType = mimePart.split(':')[1];
+      const activeApiKey = userApiKey.trim();
 
-      const upscaleParts = [
-        { inlineData: { data: data, mimeType: mimeType } },
-        { text: "Upscale this image to high resolution, enhance details, sharp, masterpiece, 4k quality." }
-      ];
-
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-image",
-        contents: { parts: upscaleParts },
+      const res = await fetch("/api/upscale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, apiKey: activeApiKey })
       });
 
-      let base64Data = "";
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          base64Data = part.inlineData.data;
-          break;
-        }
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to upscale image");
       }
 
-      if (!base64Data) throw new Error("No upscaled image data received.");
-
-      const upscaledUrl = `data:image/png;base64,${base64Data}`;
+      const { url: upscaledUrl } = await res.json();
 
       const upscaledImage: GeneratedImage = {
         ...image,
@@ -159,97 +146,44 @@ export function useGenerateFusion({
     setError(null);
 
     try {
-      const activeApiKey = userApiKey.trim() || API_KEY;
-      const ai = new GoogleGenAI({ apiKey: activeApiKey });
+      const activeApiKey = userApiKey.trim();
       
-      const fullPrompt = buildGenerationPrompt({
-        selectedSeries,
-        customPrompt,
+      const payload = {
+        series: selectedSeries,
+        prompt: customPrompt,
         negativePrompt,
         promptPrefix,
         transparentBackground,
-        hasReferenceImages: referenceImages.length > 0
-      });
- 
-      let finalPrompt = fullPrompt;
-      if (externalModelsConfig && externalModelsConfig.activeSubtaskModel !== 'none') {
-        setGenerationStatus(`Delegating prompt enhancement to ${externalModelsConfig.activeSubtaskModel}...`);
-        try {
-          finalPrompt = await delegateSubtaskToExternalModel(fullPrompt, externalModelsConfig);
-          console.log("Enhanced prompt:", finalPrompt);
-        } catch (err: any) {
-          console.warn("External model subtask failed, falling back to original prompt", err);
-          setError(`Subtask failed: ${err.message}. Falling back to direct generation.`);
-        }
-        setGenerationStatus(null);
-      }
-
-      const parts: any[] = [];
-      referenceImages.forEach(img => {
-        parts.push({
-          inlineData: {
-            data: img.data,
-            mimeType: img.mimeType
-          }
-        });
-      });
-      parts.push({ text: finalPrompt });
-
-      // STEP 1: Generate Draft
-      const draftParts = [...parts, { text: "Generate a fast, low-detail conceptual draft of: " + finalPrompt }];
-      const draftResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash-image",
-        contents: { parts: draftParts },
-      });
-
-      let draftBase64 = "";
-      for (const part of draftResponse.candidates[0].content.parts) {
-        if (part.inlineData) {
-          draftBase64 = part.inlineData.data;
-          break;
-        }
-      }
-
-      if (!draftBase64) throw new Error("No draft image data received.");
-      const draftUrl = `data:image/png;base64,${draftBase64}`;
-      setDraftImage(draftUrl);
-
-      // STEP 2: Generate Final
-      const finalParts = [
-        { inlineData: { data: draftBase64, mimeType: "image/png" } },
-        { text: "Use this draft image as the exact base composition. Enhance, refine, and render it in extremely high quality and detail based on this description: " + finalPrompt }
-      ];
-
-      const response = await ai.models.generateContent({
+        referenceImages,
         model: selectedModel,
-        contents: { parts: finalParts },
+        apiKey: activeApiKey
+      };
+
+      // Since we don't stream draft progression over HTTP yet, we'll just wait for final image.
+      // We can update generating status
+      setGenerationStatus("Synthesizing fusion...");
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
-
-      let base64Data = "";
-      let responseMetadata = "";
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          base64Data = part.inlineData.data;
-        } else if (part.text) {
-          responseMetadata = part.text;
-        }
-      }
-
-      if (!base64Data) throw new Error("No image data received.");
-
-      let imageUrl = `data:image/png;base64,${base64Data}`;
       
-      if (transparentBackground || fullPrompt.toLowerCase().includes("transparent") || fullPrompt.toLowerCase().includes("transparency")) {
-        imageUrl = await processTransparency(imageUrl);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate image.");
       }
+
+      const imageUrl = data.url;
 
       const newImage: GeneratedImage = {
-        id: Date.now().toString(),
+        id: data.id,
         url: imageUrl,
-        prompt: finalPrompt,
+        prompt: data.prompt,
         series: [...selectedSeries],
-        timestamp: Date.now(),
-        metadata: responseMetadata,
+        timestamp: data.timestamp,
+        metadata: data.metadata,
       };
 
       setGeneratedImage(newImage);
@@ -259,41 +193,30 @@ export function useGenerateFusion({
         setIsGeneratingMusic(true);
         try {
           let musicApiKey = activeApiKey;
-          if ((window as any).aistudio) {
+          if ((window as any).aistudio && !musicApiKey) {
             const hasKey = await (window as any).aistudio.hasSelectedApiKey();
             if (!hasKey) {
               await (window as any).aistudio.openSelectKey();
             }
-            musicApiKey = process.env.API_KEY || activeApiKey;
+            musicApiKey = process.env.GEMINI_API_KEY || activeApiKey;
           }
           
-          const musicAi = new GoogleGenAI({ apiKey: musicApiKey });
-          
-          const musicResponse = await musicAi.models.generateContentStream({
-            model: "lyria-3-clip-preview",
-            contents: {
-              parts: [
-                { text: `Generate a 30-second anime opening style track inspired by this image and prompt: ${fullPrompt}` },
-                { inlineData: { data: base64Data, mimeType: "image/png" } },
-              ],
-            },
+          const audioRes = await fetch("/api/music", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: data.prompt,
+              imageBase64: imageUrl.split(",")[1] || imageUrl,
+              apiKey: musicApiKey
+            })
           });
 
-          let audioBase64 = "";
-          let audioMimeType = "audio/wav";
-
-          for await (const chunk of musicResponse) {
-            const parts = chunk.candidates?.[0]?.content?.parts;
-            if (!parts) continue;
-            for (const part of parts) {
-              if (part.inlineData?.data) {
-                if (!audioBase64 && part.inlineData.mimeType) {
-                  audioMimeType = part.inlineData.mimeType;
-                }
-                audioBase64 += part.inlineData.data;
-              }
-            }
+          if (!audioRes.ok) {
+            const errData = await audioRes.json();
+            throw new Error(errData.error || "Failed to generate music");
           }
+
+          const { audioBase64, audioMimeType } = await audioRes.json();
 
           if (audioBase64) {
             const binary = atob(audioBase64);
@@ -321,6 +244,7 @@ export function useGenerateFusion({
     } finally {
       setIsGenerating(false);
       setDraftImage(null);
+      setGenerationStatus(null);
     }
   };
 
