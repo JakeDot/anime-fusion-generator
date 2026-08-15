@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import PREDEFINED_SERIES from '../series/series.json';
-import { handleFirestoreError, OperationType } from '../utils/firestore-error';
 import { compressImageForFirestore } from '../generator/utils/image-processing';
+import { generateFusionImage } from '../utils/api-client';
 
 const PROMPT_TEMPLATES = [
   "Epic battle scene with dynamic lighting",
@@ -70,22 +70,14 @@ async function generateAutoDream() {
     // Pick a random prompt template
     const template = PROMPT_TEMPLATES[Math.floor(Math.random() * PROMPT_TEMPLATES.length)];
 
-    const res = await fetch('/api/generate', {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        series: selectedSeriesNames,
-        prompt: template,
-        apiKey: apiKey || ""
-      })
+    const result = await generateFusionImage({
+      series: selectedSeriesNames,
+      prompt: template,
+      apiKey: apiKey || ""
     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Failed to generate image.");
-    }
-
-    const { url: rawImageUrl, prompt: fullPrompt } = await res.json();
+    const rawImageUrl = result.url;
+    const fullPrompt = result.prompt;
     const compressedImageUrl = await compressImageForFirestore(rawImageUrl);
 
     // Save to Firestore

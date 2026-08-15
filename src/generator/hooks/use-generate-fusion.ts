@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { GeneratedImage, ReferenceImage, ExternalModelsConfig } from '../../types';
 import { injectMetadata } from '../utils/png-metadata';
-import { processTransparency } from '../utils/image-processing';
 import metadata from '../../../metadata.json';
-import { buildGenerationPrompt } from '../utils/prompt-builder';
-import { delegateSubtaskToExternalModel } from '../../utils/external-ai';
-
-const API_KEY = process.env.GEMINI_API_KEY || "";
+import {
+  generateFusionImage,
+  upscaleImage,
+  generateMusic as generateMusicApi
+} from '../../utils/api-client';
 
 interface UseGenerateFusionProps {
   selectedSeries: string[];
@@ -36,7 +35,6 @@ export function useGenerateFusion({
   promptPrefix,
   setReferenceImages,
   setAndCommit,
-  externalModelsConfig
 }: UseGenerateFusionProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
@@ -51,7 +49,7 @@ export function useGenerateFusion({
       const pngMetadata: Record<string, string> = {
         'Prompt': image.prompt,
         'Software': 'Anime Fusion Generator',
-        'Version': (metadata as any).version || '0.5',
+        'Version': (metadata as any).version || '0.7.0',
         'Series': image.series.join(', '),
         'Timestamp': new Date(image.timestamp).toISOString()
       };
@@ -103,24 +101,12 @@ export function useGenerateFusion({
     setError(null);
     try {
       const activeApiKey = userApiKey.trim();
-
-      const res = await fetch("/api/upscale", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, apiKey: activeApiKey })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to upscale image");
-      }
-
-      const { url: upscaledUrl } = await res.json();
+      const res = await upscaleImage(image, activeApiKey);
 
       const upscaledImage: GeneratedImage = {
         ...image,
         id: Date.now().toString(),
-        url: upscaledUrl,
+        url: res.url,
         prompt: image.prompt + " (Upscaled)",
         timestamp: Date.now(),
       };
@@ -147,8 +133,9 @@ export function useGenerateFusion({
 
     try {
       const activeApiKey = userApiKey.trim();
-      
-      const payload = {
+      setGenerationStatus("Synthesizing fusion...");
+
+      const data = await generateFusionImage({
         series: selectedSeries,
         prompt: customPrompt,
         negativePrompt,
@@ -157,23 +144,7 @@ export function useGenerateFusion({
         referenceImages,
         model: selectedModel,
         apiKey: activeApiKey
-      };
-
-      // Since we don't stream draft progression over HTTP yet, we'll just wait for final image.
-      // We can update generating status
-      setGenerationStatus("Synthesizing fusion...");
-
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
       });
-      
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate image.");
-      }
 
       const imageUrl = data.url;
 
@@ -200,23 +171,12 @@ export function useGenerateFusion({
             }
             musicApiKey = process.env.GEMINI_API_KEY || activeApiKey;
           }
-          
-          const audioRes = await fetch("/api/music", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: data.prompt,
-              imageBase64: imageUrl.split(",")[1] || imageUrl,
-              apiKey: musicApiKey
-            })
-          });
 
-          if (!audioRes.ok) {
-            const errData = await audioRes.json();
-            throw new Error(errData.error || "Failed to generate music");
-          }
-
-          const { audioBase64, audioMimeType } = await audioRes.json();
+          const { audioBase64, audioMimeType } = await generateMusicApi(
+            data.prompt,
+            imageUrl.split(",")[1] || imageUrl,
+            musicApiKey
+          );
 
           if (audioBase64) {
             const binary = atob(audioBase64);
