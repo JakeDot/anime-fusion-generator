@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Activity, CheckCircle2, AlertCircle, Loader2, Server } from 'lucide-react';
+import { X, Activity, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { checkHealth } from '../../utils/api-client';
 
 interface StatusModalProps {
   isOpen: boolean;
@@ -12,7 +13,6 @@ type APIStatus = 'checking' | 'online' | 'offline' | 'error';
 export const StatusModal: React.FC<StatusModalProps> = ({
   isOpen,
   onClose,
-  apiKey,
 }) => {
   const [status, setStatus] = useState<APIStatus>('checking');
   const [latency, setLatency] = useState<number | null>(null);
@@ -23,8 +23,8 @@ export const StatusModal: React.FC<StatusModalProps> = ({
     const startTime = performance.now();
 
     try {
-      const res = await fetch("/api/health");
-      if (!res.ok) throw new Error("Health check failed");
+      const res = await checkHealth();
+      if (res.status !== 'ok') throw new Error("Health check failed");
       
       const endTime = performance.now();
       setLatency(Math.round(endTime - startTime));
