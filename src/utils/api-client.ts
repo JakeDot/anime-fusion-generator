@@ -161,6 +161,83 @@ export async function generateFusionImage(params: GenerateParams): Promise<Gener
   };
 }
 
+export async function refineImage(
+  image: { url: string; prompt?: string; series?: string[] },
+  refinePrompt?: string,
+  apiKey?: string
+): Promise<{ url: string; prompt: string; metadata?: string }> {
+  const activeApiKey = getApiKey(apiKey);
+
+  try {
+    const res = await fetch("/api/refine", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image, refinePrompt, apiKey: activeApiKey }),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn("Backend /api/refine unavailable, using client-side fallback.", err);
+  }
+
+  if (!activeApiKey) throw new Error("Missing API Key.");
+
+  const ai = new GoogleGenAI({ apiKey: activeApiKey });
+  const [mimePart, data] = image.url.split(";base64,");
+  const mimeType = mimePart ? mimePart.split(":")[1] : "image/png";
+
+  const promptText = refinePrompt?.trim()
+    ? `Refine and modify this image according to the following instruction: ${refinePrompt.trim()}. Keep the core artistic style and elements intact while applying the requested changes with high detail and quality.`
+    : "Refine and enhance this image. Improve line quality, lighting, color depth, and overall detail while preserving the original artwork's composition and subject.";
+
+  const refineParts = [
+    { inlineData: { data, mimeType } },
+    { text: promptText },
+  ];
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-image",
+    contents: { parts: refineParts },
+  });
+
+  let base64Data = "";
+  let responseText = "";
+  if (response.candidates?.[0]?.content?.parts) {
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        base64Data = part.inlineData.data;
+      } else if (part.text) {
+        responseText = part.text;
+      }
+    }
+  }
+
+  if (!base64Data) throw new Error("No refined image data received.");
+
+  const imageUrl = `data:image/png;base64,${base64Data}`;
+  const newPrompt = image.prompt
+    ? `${image.prompt} (Refined: ${refinePrompt?.trim() || "Enhanced"})`
+    : (refinePrompt?.trim() || "Refined Image");
+
+  const pngMetadata: Record<string, string> = {
+    Prompt: newPrompt,
+    Software: "Anime Fusion Generator",
+    Version: (metadata as any).version || "0.7.0",
+    Series: (image.series || []).join(", "),
+    Timestamp: new Date().toISOString(),
+  };
+
+  const finalImageUrl = injectMetadata(imageUrl, pngMetadata);
+
+  return {
+    url: finalImageUrl,
+    prompt: newPrompt,
+    metadata: responseText,
+  };
+}
+
 export async function upscaleImage(image: { url: string }, apiKey?: string): Promise<{ url: string }> {
   const activeApiKey = getApiKey(apiKey);
 

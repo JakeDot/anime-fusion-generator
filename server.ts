@@ -144,6 +144,68 @@ async function startServer() {
     }
   });
 
+  app.post("/api/refine", async (req: Request, res: Response) => {
+    try {
+      const { image, refinePrompt = "", apiKey } = req.body;
+      const activeApiKey = apiKey || API_KEY;
+      if (!activeApiKey) return res.status(401).json({ error: "Missing API Key" });
+
+      const ai = new GoogleGenAI({ apiKey: activeApiKey });
+
+      const [mimePart, data] = image.url.split(';base64,');
+      const mimeType = mimePart ? mimePart.split(':')[1] : "image/png";
+
+      const promptText = refinePrompt.trim()
+        ? `Refine and modify this image according to the following instruction: ${refinePrompt.trim()}. Keep the core artistic style and elements intact while applying the requested changes with high detail and quality.`
+        : "Refine and enhance this image. Improve line quality, lighting, color depth, and overall detail while preserving the original artwork's composition and subject.";
+
+      const refineParts = [
+        { inlineData: { data: data, mimeType: mimeType } },
+        { text: promptText }
+      ];
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: { parts: refineParts },
+      });
+
+      let base64Data = "";
+      let responseText = "";
+      if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            base64Data = part.inlineData.data;
+          } else if (part.text) {
+            responseText = part.text;
+          }
+        }
+      }
+
+      if (!base64Data) throw new Error("Failed to generate refined image.");
+
+      const imageUrl = `data:image/png;base64,${base64Data}`;
+
+      const pngMetadata: Record<string, string> = {
+        'Prompt': image.prompt ? `${image.prompt} [Refined: ${refinePrompt || "Enhanced details"}]` : (refinePrompt || "Refined Image"),
+        'Software': 'Anime Fusion Generator API',
+        'Version': (metadata as any).version || '0.7.0',
+        'Series': (image.series || []).join(', '),
+        'Timestamp': new Date().toISOString()
+      };
+
+      const finalImageUrl = injectMetadata(imageUrl, pngMetadata);
+
+      res.json({
+        url: finalImageUrl,
+        prompt: image.prompt ? `${image.prompt} (Refined: ${refinePrompt.trim() || "Enhanced"})` : (refinePrompt.trim() || "Refined Image"),
+        metadata: responseText
+      });
+    } catch (err: any) {
+      console.error("Refine error:", err);
+      res.status(500).json({ error: err.message || "Internal Server Error" });
+    }
+  });
+
   app.post("/api/upscale", async (req: Request, res: Response) => {
     try {
       const { image, apiKey } = req.body;

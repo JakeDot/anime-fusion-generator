@@ -29,6 +29,7 @@ interface GeneratorSectionProps {
   downloadImage: (image: GeneratedImage) => void;
   setIsEditing: (val: boolean) => void;
   onIterate: (image: GeneratedImage) => void;
+  onRefine?: (image: GeneratedImage) => void;
   onUpscale: (image: GeneratedImage) => void;
   onSettingsClick: () => void;
 }
@@ -57,6 +58,7 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
   downloadImage,
   setIsEditing,
   onIterate,
+  onRefine,
   onUpscale,
   onSettingsClick
 }) => {
@@ -243,6 +245,7 @@ export const GeneratorSection: React.FC<GeneratorSectionProps> = ({
                 downloadImage={downloadImage}
                 setIsEditing={setIsEditing}
                 onIterate={onIterate}
+                onRefine={onRefine}
                 onUpscale={onUpscale}
               >
                 <GenerationOverlay 

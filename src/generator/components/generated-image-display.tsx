@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Scissors, IterationCcw, Share2, Check, Twitter, Facebook, MessageCircle, Loader2, Maximize } from 'lucide-react';
+import { Download, Scissors, IterationCcw, Share2, Check, Twitter, Facebook, MessageCircle, Loader2, Maximize, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
@@ -14,6 +14,7 @@ interface GeneratedImageDisplayProps {
   downloadImage: (image: GeneratedImage) => void;
   setIsEditing: (val: boolean) => void;
   onIterate: (image: GeneratedImage) => void;
+  onRefine?: (image: GeneratedImage) => void;
   onUpscale?: (image: GeneratedImage) => void;
   children?: React.ReactNode;
 }
@@ -23,6 +24,7 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
   downloadImage,
   setIsEditing,
   onIterate,
+  onRefine,
   onUpscale,
   children
 }) => {
@@ -120,6 +122,14 @@ export const GeneratedImageDisplay: React.FC<GeneratedImageDisplayProps> = ({
               >
                 <IterationCcw className="w-4 h-4" /> Iterate
               </button>
+              {onRefine && (
+                <button
+                  onClick={() => onRefine(generatedImage)}
+                  className="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl backdrop-blur-md transition-colors flex items-center gap-2 text-xs font-bold"
+                >
+                  <Sparkles className="w-4 h-4" /> Refine
+                </button>
+              )}
               {onUpscale && (
                 <button 
                   onClick={() => onUpscale(generatedImage)}
