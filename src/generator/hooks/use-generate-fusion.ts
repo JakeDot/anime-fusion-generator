@@ -4,6 +4,7 @@ import { injectMetadata } from '../utils/png-metadata';
 import metadata from '../../../metadata.json';
 import {
   generateFusionImage,
+  refineImage,
   upscaleImage,
   generateMusic as generateMusicApi
 } from '../../utils/api-client';
@@ -94,6 +95,34 @@ export function useGenerateFusion({
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRefine = async (image: GeneratedImage, refinePrompt?: string) => {
+    setIsGenerating(true);
+    setGenerationStatus("Refining image...");
+    setError(null);
+    try {
+      const activeApiKey = userApiKey.trim();
+      const res = await refineImage(image, refinePrompt, activeApiKey);
+
+      const refinedImage: GeneratedImage = {
+        ...image,
+        id: Date.now().toString(),
+        url: res.url,
+        prompt: res.prompt,
+        metadata: res.metadata || image.metadata,
+        timestamp: Date.now(),
+      };
+
+      setGeneratedImage(refinedImage);
+      setHistory(prev => [refinedImage, ...prev]);
+    } catch (err: any) {
+      console.error("Refine error:", err);
+      setError(err.message || "Failed to refine image.");
+    } finally {
+      setIsGenerating(false);
+      setGenerationStatus(null);
+    }
   };
 
   const handleUpscale = async (image: GeneratedImage) => {
@@ -220,6 +249,7 @@ export function useGenerateFusion({
     generateFusion,
     downloadImage,
     handleIterate,
+    handleRefine,
     handleUpscale
   };
 }

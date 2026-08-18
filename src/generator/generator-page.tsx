@@ -10,6 +10,7 @@ import { ImageUploader } from './components/image-uploader';
 import { GeneratorSection } from './components/generator-section';
 import { HistorySection } from '../history/history-section';
 import { EditModal } from './components/edit-modal';
+import { RefineModal } from './components/refine-modal';
 import { SettingsModal } from './components/settings-modal';
 import { StatusModal } from './components/status-modal';
 import { ImpressumModal } from './components/impressum-modal';
@@ -17,7 +18,7 @@ import { useUndoRedo } from './hooks/use-undo-redo';
 import { useImageUpload } from './hooks/use-image-upload';
 import { useGenerateFusion } from './hooks/use-generate-fusion';
 import { DynamicBackground } from './components/dynamic-background';
-import { ExternalModelsConfig } from '../types';
+import { ExternalModelsConfig, GeneratedImage } from '../types';
 
 import PREDEFINED_SERIES from '../series/series.json';
 
@@ -71,6 +72,10 @@ export function GeneratorPage() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
+  // Refine Modal State
+  const [isRefineOpen, setIsRefineOpen] = useState(false);
+  const [refineImageTarget, setRefineImageTarget] = useState<GeneratedImage | null>(null);
+
   // Custom Hooks
   const {
     referenceImages,
@@ -96,6 +101,7 @@ export function GeneratorPage() {
     generateFusion,
     downloadImage,
     handleIterate,
+    handleRefine,
     handleUpscale
   } = useGenerateFusion({
     selectedSeries,
@@ -142,6 +148,11 @@ export function GeneratorPage() {
     setSelectedSeries(prev => 
       prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     );
+  };
+
+  const handleOpenRefine = (image: GeneratedImage) => {
+    setRefineImageTarget(image);
+    setIsRefineOpen(true);
   };
 
   return (
@@ -197,6 +208,7 @@ export function GeneratorPage() {
           downloadImage={downloadImage}
           setIsEditing={setIsEditing}
           onIterate={handleIterate}
+          onRefine={handleOpenRefine}
           onUpscale={handleUpscale}
           onSettingsClick={() => setIsSettingsOpen(true)}
         />
@@ -223,6 +235,14 @@ export function GeneratorPage() {
         zoom={zoom}
         setZoom={setZoom}
         onCropComplete={onCropComplete}
+      />
+
+      <RefineModal
+        isOpen={isRefineOpen}
+        onClose={() => setIsRefineOpen(false)}
+        image={refineImageTarget}
+        onRefine={handleRefine}
+        isGenerating={isGenerating}
       />
 
       <SettingsModal 
